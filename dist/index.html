@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Tareas</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .task-list { list-style-type: none; padding: 0; }
+        .task-item { display: flex; align-items: center; margin-bottom: 8px; }
+        .task-item input[type="checkbox"] { margin-right: 10px; }
+        .completed { text-decoration: line-through; color: #888; }
+    </style>
+</head>
+<body>
+    <h1>Lista de Tareas</h1>
+    <p id="username">Usuario: </p>
+    <form id="taskForm">
+        <input type="text" id="newTask" placeholder="Nueva tarea...">
+        <button type="submit">Agregar</button>
+    </form>
+    <ul id="taskList" class="task-list"></ul>
+    <button id="removeCompleted">Eliminar completadas</button>
+
+    <script>
+        class TodoItem {
+            constructor(id, task, complete = false) {
+                this.id = id;
+                this.task = task;
+                this.complete = complete;
+            }
+        }
+
+        class TodoCollection {
+            constructor(userName, todoItems = []) {
+                this.userName = userName;
+                this.nextId = 1;
+                this.itemMap = new Map();
+                todoItems.forEach(item => this.itemMap.set(item.id, item));
+            }
+            addTodo(task) {
+                while (this.getTodoById(this.nextId)) {
+                    this.nextId++;
+                }
+                this.itemMap.set(this.nextId, new TodoItem(this.nextId, task));
+                return this.nextId;
+            }
+            getTodoById(id) {
+                return this.itemMap.get(id);
+            }
+            getTodoItems(includeComplete) {
+                return [...this.itemMap.values()]
+                    .filter(item => includeComplete || !item.complete);
+            }
+            markComplete(id, complete) {
+                const todoItem = this.getTodoById(id);
+                if (todoItem) {
+                    todoItem.complete = complete;
+                }
+            }
+            removeComplete() {
+                this.itemMap.forEach(item => {
+                    if (item.complete) {
+                        this.itemMap.delete(item.id);
+                    }
+                });
+            }
+        }
+
+        const todos = [];
+
+        const collection = new TodoCollection("Adam", todos);
+
+        const taskForm = document.getElementById("taskForm");
+        const newTaskInput = document.getElementById("newTask");
+        const taskList = document.getElementById("taskList");
+        const removeCompletedBtn = document.getElementById("removeCompleted");
+        const usernameDisplay = document.getElementById("username");
+
+        usernameDisplay.textContent = `Usuario: ${collection.userName}`;
+
+        function displayTasks() {
+            taskList.innerHTML = "";
+            collection.getTodoItems(true).forEach(item => {
+                const listItem = document.createElement("li");
+                listItem.className = `task-item ${item.complete ? 'completed' : ''}`;
+                listItem.innerHTML = `
+                    <input type="checkbox" ${item.complete ? "checked" : ""} 
+                        onchange="toggleComplete(${item.id}, this.checked)">
+                    ${item.task}`;
+                taskList.appendChild(listItem);
+            });
+        }
+
+        window.toggleComplete = (id, isComplete) => {
+            collection.markComplete(id, isComplete);
+            displayTasks();
+        };
+
+        taskForm.addEventListener("submit", (e) => {
+            e.preventDefault();
+            if (newTaskInput.value.trim()) {
+                collection.addTodo(newTaskInput.value.trim());
+                newTaskInput.value = "";
+                displayTasks();
+            }
+        });
+
+        removeCompletedBtn.addEventListener("click", () => {
+            collection.removeComplete();
+            displayTasks();
+        });
+
+        displayTasks();
+    </script>
+</body>
+</html>
